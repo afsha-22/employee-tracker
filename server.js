@@ -109,7 +109,33 @@ function viewAllRoles() {
 }
 
 function addRole() {
-    init();
+    inquirer.prompt([
+        {
+            name: "roleName",
+            type: 'input',
+            message: 'Please enter the name of the Role',
+        },
+        {
+            name: "roleSalary",
+            type: 'input',
+            message: 'Please enter the salary of the Role',
+        },
+        {
+            name: "roleDept",
+            type: 'input',
+            message: 'Please enter the name of the department that Role belongs to',
+        }
+    ]).then((answers) => {
+        db.query('INSERT INTO role SET ?', {
+            title: answers.roleName,
+            salary: answers.roleSalary,
+            department_id: answers.roleDept //This needs to be updated later as dep name and not dep id
+        });
+
+        console.log(`New Role ${answers.roleName} added to the database`)
+
+        init();
+    })
 }
 
 function viewAllDepartments() {
@@ -131,7 +157,7 @@ function addDepartment() {
             name: answers.departmentName
         });
 
-        console.log('New department added:', answers.departmentName)
+        console.log(`New department ${answers.departmentName} added to the database`)
 
         init();
     })
