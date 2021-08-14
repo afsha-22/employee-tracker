@@ -21,20 +21,6 @@ const db = mysql.createConnection(
     console.log(`Connected to the books_db database.`)
 );
 
-// db.query('SELECT * FROM department', function (err, results) {
-//     console.table(results);
-//   });
-
-// db.query('SELECT * FROM role', function (err, results) {
-//     console.table(results);
-//   });
-
-// db.query('SELECT * FROM employee', function (err, results) {
-//     console.table(results);
-//   });
-
-
-
 function init() {
     inquirer.prompt({
         name: "query",
@@ -96,9 +82,63 @@ function init() {
 }
 
 function viewAllEmployees() {
+    // SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name, role.salary, employee.manager
+    // FROM ((employee
+    // INNER JOIN role ON employee.id=role.department_id)
+    // INNER JOIN department ON employee.id=
+    db.query('SELECT * FROM employee', function (err, results) {
+        console.log('-----------')
+        console.table(results);
+        init();
+      });
+}
+
+function addEmployee() {
+    init();
+}
+
+function updateEmployeeRole() {
+    init();
+}
+
+function viewAllRoles() {
+    db.query('SELECT title FROM role', function (err, results) {
+        console.table(results);
+      });
+    init();
+}
+
+function addRole() {
+    init();
+}
+
+function viewAllDepartments() {
     db.query('SELECT * FROM department', function (err, results) {
         console.table(results);
       });
+    init();
+}
+
+function addDepartment() {
+    inquirer.prompt([
+        {
+        name: "departmentName",
+        type: 'input',
+        message: 'Please enter the name of new department',
+    }
+    ]).then((answers) => {
+        db.query('INSERT INTO department SET ?', {
+            name: answers.departmentName
+        });
+
+        console.log('New department added:', answers.departmentName)
+
+        init();
+    })
+}
+
+function quit() {
+    init();
 }
 
 app.use((req, res) => {
