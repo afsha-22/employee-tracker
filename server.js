@@ -4,6 +4,8 @@ const table = require('console.table');
 const sequelize = require('./config/connection');
 require("dotenv").config();
 var inquirer = require('inquirer');
+const util = require('util');
+
 
 const PORT = process.env.PORT || 3001;
 const app = express();
@@ -20,6 +22,8 @@ const db = mysql.createConnection(
     },
     console.log(`Connected to the books_db database.`)
 );
+
+db.query = util.promisify(db.query);
 
 function init() {
     inquirer.prompt({
@@ -93,8 +97,58 @@ function viewAllEmployees() {
       });
 }
 
-function addEmployee() {
-    init();
+async function addEmployee() {
+    let roles = await db.query('SELECT * FROM role')
+    let managers = await db.query('SELECT * FROM employee')
+    inquirer.prompt([
+        {
+            name: "empFirstName",
+            type: 'input',
+            message: 'Please enter the first name of the Employee',
+        },
+        {
+            name: "emplastName",
+            type: 'input',
+            message: 'Please enter the last name of the Employee',
+        },
+        {
+            name: "empRole",
+            type: 'list',
+            message: 'Please enter the role of the Employee',
+            choices: roles.map((role) => {
+                return {
+                    name: role.title,
+                    value: role.id
+                }
+            }),
+        },
+        {
+            name: "empManager",
+            type: 'list',
+            message: 'Please enter the manager of the Employee',
+            choices: managers.map((manager) => {
+                return {
+                    name: manager.first_name + " " + manager.last_name,
+                    value: manager.id
+                }
+            }),
+        }
+    ]).then((answers) => {
+        db.query('INSERT INTO employee SET ?', {
+            first_name: answers.empFirstName,
+            last_name: answers.emplastName,
+            role_id: answers.empRole, //This needs to be updated later as dep name and not dep id
+            manager_id: answers.empManager
+        })
+
+        console.log(`New Employee ${answers.empFirstName} ${answers.emplastName} added to the database`)
+
+        init();
+    })
+    .catch((err) => {
+        console.log(err);
+        init();
+    })
 }
 
 function updateEmployeeRole() {
