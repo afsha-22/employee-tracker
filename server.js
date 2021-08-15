@@ -208,13 +208,20 @@ async function updateEmployeeRole() {
 }
 
 function viewAllRoles() {
-    db.query('SELECT title FROM role', function (err, results) {
+    const allRoles = `SELECT role.id, role.title, department.name AS department, role.salary
+    FROM role
+    LEFT JOIN department
+    ON role.department_id=department.id
+    ORDER BY role.id;`
+
+    db.query(allRoles, function (err, results) {
         console.table("\n", results);
       });
     init();
 }
 
-function addRole() {
+async function addRole() {
+    let departments = await db.query('SELECT * FROM department')
     inquirer.prompt([
         {
             name: "roleName",
@@ -228,14 +235,27 @@ function addRole() {
         },
         {
             name: "roleDept",
-            type: 'input',
-            message: 'Please enter the name of the department that Role belongs to',
+            type: 'list',
+            message: 'Please select the name of the department that Role belongs to',
+            choices: departments.map((department) => {
+                return {
+                    name: department.department_name,
+                    value: department.name
+                }
+            }),
         }
     ]).then((answers) => {
+        let chosenDepartment
+        for (i = 0; i < departments.length; i++) {
+            if(departments[i].department_name === answers.choice) {
+                chosenDepartment = departments[i];
+                // console.log(department[i])
+            };
+        }
         db.query('INSERT INTO role SET ?', {
             title: answers.roleName,
             salary: answers.roleSalary,
-            department_id: answers.roleDept //This needs to be updated later as dep name and not dep id
+            department_id: answers.roleDept //Updated to be detp name but needs to linked to dep id now
         });
 
         console.log("\n", `New Role ${answers.roleName} added to the database`)
