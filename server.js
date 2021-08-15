@@ -5,6 +5,7 @@ const sequelize = require('./config/connection');
 require("dotenv").config();
 var inquirer = require('inquirer');
 const util = require('util');
+const e = require('express');
 
 
 const PORT = process.env.PORT || 3001;
@@ -86,13 +87,26 @@ function init() {
 }
 
 function viewAllEmployees() {
-    // SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name, role.salary, employee.manager
-    // FROM ((employee
-    // INNER JOIN role ON employee.id=role.department_id)
-    // INNER JOIN department ON employee.id=
-    db.query('SELECT * FROM employee', function (err, results) {
-        console.log('-----------')
-        console.table(results);
+
+    const allEmployees = `SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM employee
+    LEFT JOIN employee manager on manager.id = employee.manager_id
+    INNER JOIN role ON (role.id = employee.role_id)
+    INNER JOIN department ON (department.id = role.department_id)
+    ORDER BY employee.id;`
+
+    // SELECT employee.id, employee.first_name, employee.last_name,
+    // role.title, department.name AS department_name, role.salary,
+    // CONCAT(employee.first_name, ' ', employee.last_name) AS manager_name
+    // FROM employee
+    // LEFT JOIN role
+    // ON employee.id=role.id;
+    // LEFT JOIN department
+    // ON department.id=role.department_id;
+
+    db.query(allEmployees, function (err, results) {
+        // console.log('-----------')
+        console.table("\n", results);
         init();
       });
 }
@@ -141,7 +155,7 @@ async function addEmployee() {
             manager_id: answers.empManager
         })
 
-        console.log(`New Employee ${answers.empFirstName} ${answers.emplastName} added to the database`)
+        console.log("\n", `New Employee ${answers.empFirstName} ${answers.emplastName} added to the database`)
 
         init();
     })
@@ -151,13 +165,51 @@ async function addEmployee() {
     })
 }
 
-function updateEmployeeRole() {
-    init();
+async function updateEmployeeRole() {
+    let employees = await db.query('SELECT first_name, last_name FROM employee')
+    let roles = await db.query('SELECT * FROM role')
+    inquirer.prompt([
+        {
+            name: "empName",
+            type: 'list',
+            message: 'Please select the employee you want to update',
+            choices: employees.map((employee) => {
+                return {
+                    name: employee.first_name + " " + employee.last_name,
+                    value: employee.id
+                }
+            }),
+        },
+        {
+            name: "empRole",
+            type: 'list',
+            message: 'Please select the role you want to assign to the Employee',
+            choices: roles.map((role) => {
+                return {
+                    name: role.title,
+                    value: role.id
+                }
+            }),
+        }
+    ]).then((answers) => {
+        db.query('UPDATE employee SET ? WHERE ?', [
+            {role_id: answers.empRole},
+            {id: answers.empName}
+        ]);
+
+        console.log("\n", `Employee updated in the database`)
+
+        init();
+    })
+    .catch((err) => {
+        console.log(err);
+        init();
+    })
 }
 
 function viewAllRoles() {
     db.query('SELECT title FROM role', function (err, results) {
-        console.table(results);
+        console.table("\n", results);
       });
     init();
 }
@@ -186,7 +238,7 @@ function addRole() {
             department_id: answers.roleDept //This needs to be updated later as dep name and not dep id
         });
 
-        console.log(`New Role ${answers.roleName} added to the database`)
+        console.log("\n", `New Role ${answers.roleName} added to the database`)
 
         init();
     })
@@ -194,7 +246,7 @@ function addRole() {
 
 function viewAllDepartments() {
     db.query('SELECT * FROM department', function (err, results) {
-        console.table(results);
+        console.table("\n", results);
       });
     init();
 }
@@ -211,14 +263,15 @@ function addDepartment() {
             name: answers.departmentName
         });
 
-        console.log(`New department ${answers.departmentName} added to the database`)
+        console.log("\n", `New department ${answers.departmentName} added to the database`)
 
         init();
     })
 }
 
 function quit() {
-    init();
+    console.log("\n", "Thanks for using the application!")
+    // db.end();
 }
 
 app.use((req, res) => {
